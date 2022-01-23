@@ -26,9 +26,9 @@
 
 ;;; Commentary:
 ;;; org-shortcut provides simple, unopinionated integration between Emacs's
-;;; org-mode and the Shortcut issue tracker
+;;; org-mode and the Shortcut issue tracker.
 ;;;
-;;; To configure org-shortcut, create an authorization token in Cluhbouse's
+;;; To configure org-shortcut, create an authorization token in Shortcut's
 ;;; settings, then place the following configuration somewhere private:
 ;;;
 ;;;   (setq org-shortcut-auth-token "<auth_token>"
@@ -70,7 +70,8 @@ If unset all projects will be synchronized")
 (defvar org-shortcut-workflow-name "Default")
 
 (defvar org-shortcut-default-story-type nil
-  "Sets the default story type. If set to 'nil', it will interactively prompt
+  "Set the default story type.
+If set to 'nil', it will interactively prompt
 the user each and every time a new story is created. If set to 'feature',
 'bug', or 'chore', that value will be used as the default and the user will
 not be prompted")
@@ -230,26 +231,26 @@ If set to nil, will never create stories with labels.")
       (when (equal 'headline (car current-elt))
         (cadr current-elt)))))
 
-(defun org-element-extract-clubhouse-id (elt &optional property)
-  (when-let* ((clubhouse-id-link (plist-get elt (or property :SHORTCUT-ID))))
+(defun org-element-extract-shortcut-id (elt &optional property)
+  (when-let* ((shortcut-id-link (plist-get elt (or property :SHORTCUT-ID))))
     (cond
      ((string-match
        (rx "[[" (one-or-more anything) "]"
            "[" (group (one-or-more digit)) "]]")
-       clubhouse-id-link)
-      (string-to-number (match-string 1 clubhouse-id-link)))
+       shortcut-id-link)
+      (string-to-number (match-string 1 shortcut-id-link)))
      ((string-match
        (rx "[[https://app.shortcut.com/"
            (one-or-more anything)
            "/story/" (group (one-or-more digit)))
-       clubhouse-id-link)
-      (string-to-number (match-string 1 clubhouse-id-link)))
+       shortcut-id-link)
+      (string-to-number (match-string 1 shortcut-id-link)))
      ((string-match-p
        (rx buffer-start
            (one-or-more digit)
            buffer-end)
-       clubhouse-id-link)
-      (string-to-number clubhouse-id-link)))))
+       shortcut-id-link)
+      (string-to-number shortcut-id-link)))))
 
 (comment
  (let ((strn "[[https://app.shortcut.com/example/story/2330][2330]]"))
@@ -259,8 +260,8 @@ If set to nil, will never create stories with labels.")
     strn)
    (string-to-number (match-string 1 strn))))
 
-(defun org-element-clubhouse-id (&optional property)
-  (org-element-extract-clubhouse-id
+(defun org-element-shortcut-id (&optional property)
+  (org-element-extract-shortcut-id
    (org-element-find-headline)
    property))
 
@@ -281,7 +282,7 @@ If set to nil, will never create stories with labels.")
                     (> org-clock-marker (point-max)))
             (widen))
           (goto-char org-clock-marker)
-          (org-element-clubhouse-id))))))
+          (org-element-shortcut-id))))))
 
 (comment
  (org-shortcut-clocked-in-story-id)
@@ -429,7 +430,7 @@ If set to nil, will never create stories with labels.")
 
 (comment
  (defcache org-shortcut-projects
-   (org-sync-clubhouse-fetch-as-id-name-pairs "projectx"))
+   (org-sync-shortcut-fetch-as-id-name-pairs "projectx"))
 
  (clear-org-shortcut-projects-cache)
  (clear-org-shortcut-cache)
@@ -636,24 +637,24 @@ If set to nil, will never create stories with labels.")
     (save-excursion
       (goto-char elt-start)
 
-      (org-set-property "clubhouse-epic-id"
+      (org-set-property "shortcut-epic-id"
                         (org-link-make-string
                          (org-shortcut-link-to-epic epic-id)
                          (number-to-string epic-id)))
 
       (when milestone-id
-        (org-set-property "clubhouse-milestone"
+        (org-set-property "shortcut-milestone"
                           (org-link-make-string
                            (org-shortcut-link-to-milestone milestone-id)
                            (alist-get milestone-id (org-shortcut-milestones))))))))
 
 (defun org-shortcut-create-epic (&optional beg end)
-  "Creates a shortcut epic using selected headlines.
+  "Creates a Shortcut epic using selected headlines.
 Will pull the title from the headline at point, or create epics for all the
 headlines in the selected region.
 
 All epics are added to the same milestone, as selected via a prompt.
-If the epics already have a CLUBHOUSE-EPIC-ID, they are filtered and ignored."
+If the epics already have a SHORTCUT-EPIC-ID, they are filtered and ignored."
   (interactive
    (when (use-region-p)
      (list (region-beginning) (region-end))))
@@ -718,12 +719,12 @@ If the epics already have a CLUBHOUSE-EPIC-ID, they are filtered and ignored."
                          (org-shortcut-link-to-story story-id)
                          (number-to-string story-id)))
       (when epic-id
-        (org-set-property "clubhouse-epic"
+        (org-set-property "shortcut-epic"
                           (org-link-make-string
                            (org-shortcut-link-to-epic epic-id)
                            (alist-get epic-id (org-shortcut-epics)))))
 
-      (org-set-property "clubhouse-project"
+      (org-set-property "shortcut-project"
                         (org-link-make-string
                          (org-shortcut-link-to-project project-id)
                          (alist-get project-id (org-shortcut-projects))))
@@ -744,7 +745,7 @@ Will pull the title from the headline at point,
 or create cards for all the headlines in the selected region.
 
 All stories are added to the same project and epic, as selected via two prompts.
-If the stories already have a CLUBHOUSE-ID, they are filtered and ignored."
+If the stories already have a SHORTCUT-ID, they are filtered and ignored."
   (interactive
    (when (use-region-p)
      (list (region-beginning) (region-end))))
@@ -806,17 +807,17 @@ children of that headline into tasks in the task list of the story."
    (format "/stories/%d/tasks" story-id)
    :data (json-encode `((description . ,title)))))
 
-(defun org-shortcut-push-task-list (&optional parent-clubhouse-id child-elts)
+(defun org-shortcut-push-task-list (&optional parent-shortcut-id child-elts)
   "Writes each child of the element at point as a task list item.
 
-When called as (org-shortcut-push-task-list PARENT-CLUBHOUSE-ID CHILD-ELTS),
+When called as (org-shortcut-push-task-list PARENT-SHORTCUT-ID CHILD-ELTS),
 allows manually passing a shortcut ID and list of org-element plists to write"
   (interactive)
   (let* ((elt (org-element-and-children-at-point))
-         (parent-clubhouse-id (or parent-clubhouse-id
-                                  (org-element-extract-clubhouse-id elt)))
+         (parent-shortcut-id (or parent-shortcut-id
+                                  (org-element-extract-shortcut-id elt)))
          (child-elts (or child-elts (plist-get elt :children)))
-         (story (org-shortcut-get-story parent-clubhouse-id))
+         (story (org-shortcut-get-story parent-shortcut-id))
          (existing-tasks (alist-get 'tasks story))
          (task-exists
           (lambda (task-name)
@@ -835,7 +836,7 @@ allows manually passing a shortcut ID and list of org-element plists to write"
         (unless (funcall task-exists task-name)
           (let ((task (org-shortcut-create-task
                        task-name
-                       :story-id parent-clubhouse-id)))
+                       :story-id parent-shortcut-id)))
             (org-shortcut-populate-created-task child-elt task start)))))))
 
 (defun org-shortcut-populate-created-task (elt task &optional begin)
@@ -846,9 +847,9 @@ allows manually passing a shortcut ID and list of org-element plists to write"
     (save-excursion
       (goto-char elt-start)
 
-      (org-set-property "clubhouse-task-id" (format "%d" task-id))
+      (org-set-property "shortcut-task-id" (format "%d" task-id))
 
-      (org-set-property "clubhouse-story-id"
+      (org-set-property "shortcut-story-id"
                         (org-link-make-string
                          (org-shortcut-link-to-story story-id)
                          (number-to-string story-id)))
@@ -895,14 +896,14 @@ allows manually passing a shortcut ID and list of org-element plists to write"
    (json-encode attrs)))
 
 (cl-defun org-shortcut-update-story-at-point (&rest attrs)
-  (when-let* ((shortcut-id (org-element-clubhouse-id)))
+  (when-let* ((shortcut-id (org-element-shortcut-id)))
     (apply
      #'org-shortcut-update-story-internal
      (cons shortcut-id attrs))
     t))
 
 (cl-defun org-shortcut-update-epic-at-point (&rest attrs)
-  (when-let* ((epic-id (org-element-clubhouse-id :SHORTCUT-EPIC-ID)))
+  (when-let* ((epic-id (org-element-shortcut-id :SHORTCUT-EPIC-ID)))
     (apply
      #'org-shortcut-update-epic-internal
      (cons epic-id attrs))
@@ -917,7 +918,7 @@ the headline."
 
   (let* ((elt (org-element-find-headline))
          (title (plist-get elt :title))
-         (shortcut-id (org-element-clubhouse-id)))
+         (shortcut-id (org-element-shortcut-id)))
     (and
      (org-shortcut-update-story-at-point
       shortcut-id
@@ -937,17 +938,17 @@ element."
                            (plist-get :todo-keyword)
                            (substring-no-properties)))
 
-         (shortcut-id (org-element-extract-clubhouse-id elt))
-         (task-id (plist-get elt :CLUBHOUSE-TASK-ID)))
+         (shortcut-id (org-element-extract-shortcut-id elt))
+         (task-id (plist-get elt :SHORTCUT-TASK-ID)))
     (cond
      (shortcut-id
       (let* ((todo-keyword (-> elt
                                (plist-get :todo-keyword)
                                (substring-no-properties))))
-        (when-let* ((clubhouse-workflow-state
+        (when-let* ((shortcut-workflow-state
                      (alist-get-equal todo-keyword org-shortcut-state-alist))
                     (workflow-state-id
-                     (alist-get-equal clubhouse-workflow-state
+                     (alist-get-equal shortcut-workflow-state
                                       (org-shortcut-workflow-states))))
           (let ((update-assignee?
                  (if (or (eq 't org-shortcut-claim-story-on-status-update)
@@ -973,12 +974,12 @@ element."
              (if update-assignee?
                  "Successfully claimed story and updated shortcut status to \"%s\""
                "Successfully updated shortcut status to \"%s\"")
-             clubhouse-workflow-state)))))
+             shortcut-workflow-state)))))
 
      (task-id
-      (let ((story-id (org-element-extract-clubhouse-id
+      (let ((story-id (org-element-extract-shortcut-id
                        elt
-                       :CLUBHOUSE-STORY-ID))
+                       :SHORTCUT-STORY-ID))
             (done? (member todo-keyword org-done-keywords)))
         (org-shortcut-update-task-internal
          story-id
@@ -1037,8 +1038,8 @@ which labels to set."
 (defun org-shortcut--task-to-headline-text (level task)
   (format "%s %s %s
 :PROPERTIES:
-:clubhouse-task-id: %s
-:clubhouse-story-id: %s
+:shortcut-task-id: %s
+:shortcut-story-id: %s
 :END:"
           (make-string level ?*)
           (if (equal :json-false (alist-get 'complete task))
@@ -1055,7 +1056,7 @@ which labels to set."
     (format
      "%s %s %s %s
 :PROPERTIES:
-:clubhouse-id: %s
+:shortcut-id: %s
 :END:
 %s
 %s
@@ -1208,7 +1209,7 @@ resulting stories at headline level LEVEL."
      (org-shortcut-populate-created-story
       (org-element-find-headline)
       story
-      :extra-properties '(("clubhouse-story-name" . name)))
+      :extra-properties '(("shortcut-story-name" . name)))
      (org-todo
       (org-shortcut-workflow-state-id-to-todo-keyword
        (alist-get 'workflow_state_id story))))))
@@ -1235,7 +1236,7 @@ Uses `org-shortcut-state-alist'. Operates over stories from BEG to END"
     (save-mark-and-excursion
       (dolist (e elts)
         (goto-char (plist-get e :begin))
-        (let* ((shortcut-id (org-element-extract-clubhouse-id e))
+        (let* ((shortcut-id (org-element-extract-shortcut-id e))
                (story (org-shortcut-get-story shortcut-id))
                (workflow-state-id (alist-get 'workflow_state_id story))
                (todo-keyword (org-shortcut-workflow-state-id-to-todo-keyword
@@ -1268,12 +1269,12 @@ stor{y,ies} at point or region"
        (lambda (epic-id)
          (-map
           (lambda (elt)
-            (let ((story-id (org-element-extract-clubhouse-id elt)))
+            (let ((story-id (org-element-extract-shortcut-id elt)))
               (org-shortcut-set-epic
                story-id epic-id
                (lambda ()
                  (org-set-property
-                  "clubhouse-epic"
+                  "shortcut-epic"
                   (org-link-make-string
                    (org-shortcut-link-to-epic epic-id)
                    (alist-get epic-id (org-shortcut-epics))))
