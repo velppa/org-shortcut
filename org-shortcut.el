@@ -20,7 +20,7 @@
 ;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 ;;; IN THE SOFTWARE.
-;;; Package-Requires: ((emacs "26.1") dash s json (org "9.3"))
+;;; Package-Requires: ((emacs "26.1") dash s ivy json (org "9.3"))
 ;;; Package-Version: 0.0.1
 ;;; URL: https://github.com/velppa/org-shortcut
 
@@ -39,6 +39,7 @@
 
 (require 'cl-lib)
 (require 'dash)
+(require 'ivy)
 (require 's)
 (require 'org)
 (require 'org-element)
@@ -551,7 +552,7 @@ If set to nil, will never create stories with labels.")
 ;;;
 
 (defun org-shortcut-prompt-for-project (cb)
-  (completing-read
+  (ivy
    "Select a project: "
    (-map #'cdr (org-shortcut-projects))
    :require-match t
@@ -562,8 +563,8 @@ If set to nil, will never create stories with labels.")
                (funcall cb project-id)))))
 
 (defun org-shortcut-prompt-for-epic (cb)
-  "Prompt the user for an epic using completing read and call CB with its ID."
-  (completing-read
+  "Prompt the user for an epic using ivy and call CB with its ID."
+  (ivy
    "Select an epic: "
    (-map #'cdr (append '((nil . "No Epic")) (org-shortcut-epics)))
    :history 'org-shortcut-epic-history
@@ -574,7 +575,7 @@ If set to nil, will never create stories with labels.")
 
 (defun org-shortcut-prompt-for-milestone (cb)
   "Prompt the user for a milestone using completing read and call CB with its ID."
-  (completing-read
+  (ivy
    "Select a milestone: "
    (-map #'cdr (append '((nil . "No Milestone")) (org-shortcut-milestones)))
    :require-match t
@@ -585,7 +586,7 @@ If set to nil, will never create stories with labels.")
                (funcall cb milestone-id)))))
 
 (defun org-shortcut-prompt-for-story-type (cb)
-  (completing-read
+  (ivy
    "Select a story type: "
    (-map #'cdr org-shortcut-story-types)
    :history 'org-shortcut-story-history
@@ -596,7 +597,7 @@ If set to nil, will never create stories with labels.")
 
 (defun org-shortcut-prompt-for-default-story-type ()
   (interactive)
-  (completing-read
+  (ivy
    "Select a default story type: "
    (-map #'cdr org-shortcut-default-story-types)
    :history 'org-shortcut-default-story-history
@@ -1099,7 +1100,7 @@ which labels to set."
              (stories (to-id-name-pairs story-list)))
         (org-shortcut-headline-from-story-id level
                                               (find-match-in-alist
-                                               (completing-read "Select Story: "
+                                               (ivy "Select Story: "
                                                          (-map #'cdr stories))
                                                stories)))
     (warn "Can't fetch my tasks if `org-shortcut-username' is unset")))
@@ -1123,7 +1124,7 @@ which labels to set."
 
 (defun org-shortcut-prompt-for-iteration (cb)
   "Prompt for iteration and call CB with that iteration"
-  (completing-read
+  (ivy
    "Select an interation: "
    (-map #'cdr (org-shortcut-iterations))
    :require-match t
@@ -1178,7 +1179,7 @@ resulting stories at headline level LEVEL."
 
 (defun org-shortcut-prompt-for-story (cb)
   "Prompt the user for a shortcut story, then call CB with the full story."
-  (completing-read "Story title: "
+  (ivy "Story title: "
             (lambda (search-term)
               (let* ((stories (org-shortcut--search-stories
                                (if search-term (format "\"%s\"" search-term)
