@@ -350,13 +350,7 @@ If set to nil, will never create stories with labels.")
 ;;; API integration
 ;;;
 
-(defvar org-shortcut-base-url* "https://api.shortcut.com/api/v3")
-
-(defun org-shortcut-auth-url (url &optional params)
- (concat url
-         "?"
-         (url-build-query-string
-          (cons `("token" ,org-shortcut-auth-token) params))))
+(defvar org-shortcut-base-url* "https://api.app.shortcut.com/api/v3")
 
 (defun org-shortcut-baseify-url (url)
  (if (s-starts-with? org-shortcut-base-url* url) url
@@ -364,17 +358,17 @@ If set to nil, will never create stories with labels.")
            (if (s-starts-with? "/" url) url
              (concat "/" url)))))
 
-(cl-defun org-shortcut-request (method url &key data (params '()))
+(cl-defun org-shortcut-request (method url &key data)
  (message "%s %s %s" method url (prin1-to-string data))
  (let* ((url-request-method method)
         (url-request-extra-headers
-         '(("Content-Type" . "application/json")))
+         '(("Content-Type" . "application/json")
+           ("Shortcut-Token" . ,org-shortcut-auth-token)))
         (url-request-data data)
         (buf))
 
    (setq url (-> url
-                 org-shortcut-baseify-url
-                 (org-shortcut-auth-url params)))
+                 org-shortcut-baseify-url))
 
    (setq buf (url-retrieve-synchronously url))
 
@@ -552,7 +546,7 @@ If set to nil, will never create stories with labels.")
 ;;;
 
 (defun org-shortcut-prompt-for-project (cb)
-  (ivy
+  (ivy-read
    "Select a project: "
    (-map #'cdr (org-shortcut-projects))
    :require-match t
@@ -564,7 +558,7 @@ If set to nil, will never create stories with labels.")
 
 (defun org-shortcut-prompt-for-epic (cb)
   "Prompt the user for an epic using ivy and call CB with its ID."
-  (ivy
+  (ivy-read
    "Select an epic: "
    (-map #'cdr (append '((nil . "No Epic")) (org-shortcut-epics)))
    :history 'org-shortcut-epic-history
@@ -575,7 +569,7 @@ If set to nil, will never create stories with labels.")
 
 (defun org-shortcut-prompt-for-milestone (cb)
   "Prompt the user for a milestone using completing read and call CB with its ID."
-  (ivy
+  (ivy-read
    "Select a milestone: "
    (-map #'cdr (append '((nil . "No Milestone")) (org-shortcut-milestones)))
    :require-match t
@@ -586,7 +580,7 @@ If set to nil, will never create stories with labels.")
                (funcall cb milestone-id)))))
 
 (defun org-shortcut-prompt-for-story-type (cb)
-  (ivy
+  (ivy-read
    "Select a story type: "
    (-map #'cdr org-shortcut-story-types)
    :history 'org-shortcut-story-history
@@ -597,7 +591,7 @@ If set to nil, will never create stories with labels.")
 
 (defun org-shortcut-prompt-for-default-story-type ()
   (interactive)
-  (ivy
+  (ivy-read
    "Select a default story type: "
    (-map #'cdr org-shortcut-default-story-types)
    :history 'org-shortcut-default-story-history
@@ -1100,7 +1094,7 @@ which labels to set."
              (stories (to-id-name-pairs story-list)))
         (org-shortcut-headline-from-story-id level
                                               (find-match-in-alist
-                                               (ivy "Select Story: "
+                                               (ivy-read "Select Story: "
                                                          (-map #'cdr stories))
                                                stories)))
     (warn "Can't fetch my tasks if `org-shortcut-username' is unset")))
@@ -1124,7 +1118,7 @@ which labels to set."
 
 (defun org-shortcut-prompt-for-iteration (cb)
   "Prompt for iteration and call CB with that iteration"
-  (ivy
+  (ivy-read
    "Select an interation: "
    (-map #'cdr (org-shortcut-iterations))
    :require-match t
@@ -1179,7 +1173,7 @@ resulting stories at headline level LEVEL."
 
 (defun org-shortcut-prompt-for-story (cb)
   "Prompt the user for a shortcut story, then call CB with the full story."
-  (ivy "Story title: "
+  (ivy-read "Story title: "
             (lambda (search-term)
               (let* ((stories (org-shortcut--search-stories
                                (if search-term (format "\"%s\"" search-term)
